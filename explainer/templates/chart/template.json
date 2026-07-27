@@ -1,0 +1,19 @@
+{
+  "kind": "chart",
+  "name": "Chart / Visualization",
+  "version": "1.0.0",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "chart_type": { "type": "string", "enum": ["bar", "line"] },
+      "labels": { "type": "array", "items": { "type": "string" } },
+      "values": { "type": "array", "items": { "type": "number" } }
+    },
+    "required": ["chart_type", "labels", "values"]
+  },
+  "default_style": {
+    "bg": "#0d1b2a",
+    "accent": "#4fc3f7",
+    "font": "sans-serif"
+  }
+}

@@ -1,0 +1,84 @@
+# --- Python ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# --- Packaging / build ----------------------------------------------------
+build/
+dist/
+sdist/
+wheels/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+
+# --- Virtual environments -------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# --- Tooling caches -------------------------------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+.tox/
+.nox/
+.cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# --- Secrets / local config ----------------------------------------------
+# Never commit real credentials — .env.example is the tracked template.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Editors / IDEs -------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- Agent / spec tooling -------------------------------------------------
+.kiro/
+# Local Claude Code state is ignored, but the checked-in agent skill is not.
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+
+# --- OS -------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# --- Explainer Studio runtime artifacts -----------------------------------
+# Pipeline scratch dirs (Pipeline uses a temp dir prefixed "explainer-").
+# Anchored to the repo root so they cannot match nested dirs such as
+# .claude/skills/explainer-studio/.
+/explainer-*/
+/frames/
+/preview_*/
+*.mp4
+*.mkv
+*.webm
+*.wav
+# Generated narration audio. Template preview.png files under
+# explainer/templates/ are tracked assets and must NOT be ignored.
+scene_*.mp3
+narration*.mp3
+
+# --- Docs site ------------------------------------------------------------
+site/
+/voice_samples/

@@ -1,0 +1,95 @@
+{
+  "topic": "Transformer Architecture",
+  "language": "en",
+  "audience": "adult",
+  "scenes": [
+    {
+      "id": 1,
+      "kind": "title",
+      "title": "Transformer Architecture",
+      "narration": "In twenty seventeen, a paper titled Attention Is All You Need replaced recurrence with a single idea: let every token look at every other token, all at once. That idea is the transformer, and it underpins nearly every modern language model.",
+      "data": {}
+    },
+    {
+      "id": 2,
+      "kind": "concept",
+      "title": "Self-Attention",
+      "narration": "Each token is projected into three vectors: a query, a key, and a value. Comparing one token's query against every key produces attention weights, and those weights blend the values together. The result is a representation of each word that already carries the context around it.",
+      "data": {
+        "bullets": [
+          "Every token becomes a query, a key, and a value",
+          "Query times key scores how much two tokens relate",
+          "Softmax turns those scores into attention weights",
+          "The output is a context-weighted blend of values"
+        ],
+        "diagram": {
+          "type": "flow",
+          "labels": ["Score", "Softmax", "Blend"]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "kind": "steps",
+      "title": "One Layer, Step by Step",
+      "narration": "A transformer block is a short, repeated pipeline. Tokens are embedded and given positional information, passed through multi-head attention, normalised, sent through a feed-forward network, and normalised again. Residual connections carry the original signal around each sublayer.",
+      "data": {
+        "steps": [
+          "Embed tokens and add positional encoding",
+          "Multi-head self-attention across the sequence",
+          "Add residual connection, then layer-normalise",
+          "Position-wise feed-forward network",
+          "Add residual connection, then layer-normalise"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "kind": "compare",
+      "title": "Why It Replaced Recurrence",
+      "narration": "Recurrent networks read a sentence one step at a time, so training cannot be parallelised and distant words are easily forgotten. Attention compares all positions simultaneously, which fits modern hardware and keeps long-range dependencies just one hop apart.",
+      "data": {
+        "left": {
+          "label": "RNN / LSTM",
+          "points": [
+            "Sequential: step t waits for step t-1",
+            "Long dependencies decay over distance",
+            "Hard to parallelise across a sequence"
+          ]
+        },
+        "right": {
+          "label": "Transformer",
+          "points": [
+            "All positions attended to in parallel",
+            "Any two tokens are one hop apart",
+            "Maps cleanly onto GPU matrix maths"
+          ]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "kind": "chart",
+      "title": "The Cost of Attention",
+      "narration": "Attention's power has a price. Because every token attends to every other token, compute grows with the square of the sequence length. Doubling the context roughly quadruples the work, which is why efficient attention variants are an active area of research.",
+      "data": {
+        "chart_type": "bar",
+        "labels": ["512", "1K", "2K", "4K", "8K"],
+        "values": [1, 4, 16, 64, 256]
+      }
+    },
+    {
+      "id": 6,
+      "kind": "takeaway",
+      "title": "Key Takeaways",
+      "narration": "Remember three things. Attention lets every token consult every other token directly. Stacking identical blocks, with residuals and normalisation, is what makes the model deep and trainable. And the quadratic cost of attention is the central trade-off you are always designing around.",
+      "data": {
+        "bullets": [
+          "Attention connects every token to every other token",
+          "Identical blocks stack into depth via residuals",
+          "Cost grows quadratically with sequence length"
+        ]
+      }
+    }
+  ]
+}

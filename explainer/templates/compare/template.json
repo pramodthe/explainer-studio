@@ -1,0 +1,33 @@
+{
+  "kind": "compare",
+  "name": "Comparison",
+  "version": "1.0.0",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "left": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "points": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["label", "points"]
+      },
+      "right": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "points": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["label", "points"]
+      }
+    },
+    "required": ["left", "right"]
+  },
+  "default_style": {
+    "bg": "#0d1b2a",
+    "accent": "#4fc3f7",
+    "accent2": "#ff8a65",
+    "font": "sans-serif"
+  }
+}

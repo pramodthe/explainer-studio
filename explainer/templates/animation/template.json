@@ -1,0 +1,32 @@
+{
+  "kind": "animation",
+  "name": "Custom Animation",
+  "version": "1.0.0",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "markup": {
+        "type": "string",
+        "description": "HTML/SVG markup for the 1280x720 stage. Give elements ids so draw(t) can address them."
+      },
+      "css": {
+        "type": "string",
+        "description": "Optional CSS for the markup. No @keyframes or transitions - all motion comes from draw(t)."
+      },
+      "js": {
+        "type": "string",
+        "description": "Body of function draw(t) with t in [0,1]. Must be a pure function of t: no Date, no Math.random, no timers, no network."
+      },
+      "caption": {
+        "type": "string",
+        "description": "Optional short caption rendered under the stage."
+      }
+    },
+    "required": ["markup", "js"]
+  },
+  "default_style": {
+    "bg": "#0d1b2a",
+    "accent": "#4fc3f7",
+    "font": "sans-serif"
+  }
+}

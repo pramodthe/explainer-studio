@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Steps Template</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  background: var(--bg, #0d1b2a);
+  font-family: var(--font, sans-serif);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#stage {
+  width: 1280px;
+  height: 720px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#steps-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 60px 120px;
+  width: 100%;
+}
+.step-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 8px;
+  opacity: 0;
+  transform: translateY(10px);
+}
+.step-connector {
+  width: 4px;
+  height: 32px;
+  margin-left: 23px;
+  margin-bottom: 8px;
+  opacity: 0;
+}
+.step-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 3px solid var(--accent, #4fc3f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  flex-shrink: 0;
+  color: var(--accent, #4fc3f7);
+  background: transparent;
+}
+.step-circle.active {
+  background: var(--accent, #4fc3f7);
+  color: var(--bg, #0d1b2a);
+}
+.step-text {
+  margin-left: 24px;
+  font-size: 26px;
+  line-height: 1.4;
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="steps-container"></div>
+</div>
+<script>
+(function() {
+  "use strict";
+
+  var _data = null;
+  var _style = null;
+  var _stepEls = [];
+  var _connectorEls = [];
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+  window.setSceneData = function(data, style) {
+    _data = data || {};
+    _style = style || {};
+
+    var root = document.documentElement;
+    root.style.setProperty("--bg", _style.bg || "#0d1b2a");
+    root.style.setProperty("--accent", _style.accent || "#4fc3f7");
+    root.style.setProperty("--font", _style.font || "sans-serif");
+    document.body.style.background = _style.bg || "#0d1b2a";
+
+    var steps = _data.steps || [];
+    var container = document.getElementById("steps-container");
+    container.innerHTML = "";
+    _stepEls = [];
+    _connectorEls = [];
+
+    for (var i = 0; i < steps.length; i++) {
+      // Step row
+      var row = document.createElement("div");
+      row.className = "step-row";
+
+      var circle = document.createElement("div");
+      circle.className = "step-circle";
+      circle.textContent = String(i + 1);
+      circle.style.borderColor = _style.accent || "#4fc3f7";
+      circle.style.color = _style.accent || "#4fc3f7";
+
+      var text = document.createElement("div");
+      text.className = "step-text";
+      text.textContent = steps[i];
+
+      row.appendChild(circle);
+      row.appendChild(text);
+      container.appendChild(row);
+      _stepEls.push({ row: row, circle: circle, text: text });
+
+      // Connector line (between steps, not after last)
+      if (i < steps.length - 1) {
+        var connector = document.createElement("div");
+        connector.className = "step-connector";
+        connector.style.background = _style.accent || "#4fc3f7";
+        container.appendChild(connector);
+        _connectorEls.push(connector);
+      }
+    }
+  };
+
+  window.renderFrame = function(t) {
+    t = clamp(t, 0, 1);
+
+    var stepCount = _stepEls.length;
+    if (stepCount === 0) return;
+
+    // Each step appears evenly across t=0.05 -> 0.95
+    var revealStart = 0.05;
+    var revealEnd = 0.95;
+    var revealRange = revealEnd - revealStart;
+    var perStep = revealRange / stepCount;
+
+    // Determine which step is "current" (most recently fully revealed)
+    var currentStepIndex = -1;
+
+    for (var i = 0; i < stepCount; i++) {
+      var sStart = revealStart + i * perStep;
+      var sEnd = sStart + perStep * 0.6;
+      var sProgress = clamp((t - sStart) / (sEnd - sStart), 0, 1);
+      sProgress = ease(sProgress);
+
+      var row = _stepEls[i].row;
+      var circle = _stepEls[i].circle;
+
+      // Reveal animation
+      row.style.opacity = sProgress;
+      row.style.transform = "translateY(" + lerp(10, 0, sProgress) + "px)";
+
+      if (sProgress >= 1) {
+        currentStepIndex = i;
+      }
+
+      // Connector reveal (slightly after step)
+      if (i < _connectorEls.length) {
+        var cStart = sStart + perStep * 0.5;
+        var cEnd = cStart + perStep * 0.4;
+        var cProgress = clamp((t - cStart) / (cEnd - cStart), 0, 1);
+        cProgress = ease(cProgress);
+        _connectorEls[i].style.opacity = cProgress;
+      }
+    }
+
+    // Highlight current step, dim previous
+    var accent = (_style && _style.accent) ? _style.accent : "#4fc3f7";
+    var bg = (_style && _style.bg) ? _style.bg : "#0d1b2a";
+
+    for (var j = 0; j < stepCount; j++) {
+      var circleEl = _stepEls[j].circle;
+      var textEl = _stepEls[j].text;
+
+      if (j === currentStepIndex) {
+        // Active step: filled circle
+        circleEl.style.background = accent;
+        circleEl.style.color = bg;
+        textEl.style.color = "#ffffff";
+      } else if (j < currentStepIndex) {
+        // Previous steps: dimmed
+        circleEl.style.background = "transparent";
+        circleEl.style.color = accent;
+        textEl.style.color = "rgba(255, 255, 255, 0.6)";
+      } else {
+        // Future steps (not yet revealed)
+        circleEl.style.background = "transparent";
+        circleEl.style.color = accent;
+        textEl.style.color = "#ffffff";
+      }
+    }
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+# Explainer Studio
+
+> Explainer Studio turns a topic string into a narrated, animated educational explainer
+> video (MP4). It ships as one PyPI package, `explainer-studio`, with a typer CLI
+> (`explainer`) and a library API (`from explainer import Pipeline, Script`). A four-stage
+> deterministic pipeline does the work: an LLM writes a schema-validated script, a TTS
+> provider narrates each scene, headless Chromium renders animated frames from
+> self-contained HTML templates, and FFmpeg composes the MP4. The defaults need no API
+> keys (heuristic LLM + edge-tts). It renders vector/HTML scenes, NOT photoreal footage.
+
+Key facts for integration:
+- Install: `pip install explainer-studio` then `playwright install chromium`; FFmpeg and
+  ffprobe must be on PATH. `explainer doctor` verifies all three.
+- CLI: `explainer generate "<topic>" [--lang --audience --duration --fps --res --llm
+  --tts --voice --music --script --keep-artifacts -o]`, plus `doctor`, `init`, `voices`,
+  `templates list`, `templates preview <kind>`.
+- Library: `Pipeline(llm=None, tts="edge", voice=None, on_progress=None)`;
+  `.generate(topic, ...)` runs all four stages, `.render(script, ...)` skips scripting.
+  Both return `GenerateResult(mp4_path, script, work_dir)`.
+- A `Script` has 3–6 `Scene`s; the first must be kind `title` and the last `takeaway`.
+  Scene kinds: title, concept, steps, compare, chart, takeaway, animation. Each scene's
+  `data` is validated against its template's JSON Schema before rendering.
+- Audio-first timing is a hard invariant: scene duration = narration audio duration +
+  0.4 s tail pad. Narration length defines scene length, never the reverse.
+- Determinism: `window.renderFrame(t)` must be a pure function of t (0→1). No `Date.now()`,
+  no `requestAnimationFrame`, no unseeded randomness. Same inputs produce a
+  pixel-identical video.
+- For the six fixed templates the LLM only fills schema-validated data, which is sanitized
+  (HTML tags, on*= handlers, javascript:/data: URIs stripped) before injection. The
+  `animation` kind additionally lets the model author markup/css/js executed as draw(t);
+  those fields skip tag-stripping but are rejected if they contain Date, Math.random,
+  timers, fetch/XHR or external URLs.
+- Rendering is sandboxed: every non-`file://` request is blocked in Chromium, and the
+  template registry rejects any `index.html` with external `src=`/`href=` URLs.
+- Config precedence: CLI args > `EXPLAINER_*` env vars > `~/.explainer/config.toml` >
+  defaults. Missing provider API keys fail fast at startup.
+- Extend via entry points: group `explainer.templates` (each resolving to a `get_path()`
+  returning a directory with `template.json` + `index.html`) and group
+  `explainer.providers` (names prefixed `llm_` / `tts_`).
+
+## Docs
+
+- [README](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/README.md):
+  full overview — quickstart, CLI and Python API reference, template contract, providers,
+  determinism guarantees
+- [Quickstart](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/docs/quickstart.md):
+  install through first generated video, step by step
+- [CLI reference](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/docs/cli.md):
+  every command, option, and stage-specific exit code
+- [Python API](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/docs/api.md):
+  Pipeline, Script, Scene, GenerateResult, ProgressEvent
+- [Template system](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/docs/templates.md):
+  the setSceneData/renderFrame contract and how to author a custom template
+- [Providers](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/docs/providers.md):
+  LLM and TTS adapters, configuration, and writing your own
+- [AGENTS.md](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/AGENTS.md):
+  repo layout, commands, and invariants for coding agents
+- [CONTRIBUTING](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/CONTRIBUTING.md):
+  development setup, testing strategy, and review expectations
+
+## Source (canonical references)
+
+- [Pipeline](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/pipeline.py):
+  the four-stage orchestrator, timing invariant, and progress events
+- [Schema](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/schema.py):
+  Script/Scene/SceneKind pydantic models and template-schema validation
+- [Renderer](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/renderer.py):
+  parallel headless-Chromium frame capture and network blocking
+- [Composer](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/composer.py):
+  FFmpeg segment encoding and concatenation
+- [Registry](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/registry.py):
+  template discovery order and self-containment checks
+- [Sanitizer](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/sanitize.py):
+  what is stripped from untrusted LLM scene data
+- [Config](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/config.py):
+  resolution order and the full env var / API key mapping
+- [Provider protocols](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/providers/llm_base.py):
+  the LLMProvider interface (see `tts_base.py` for TTSProvider)
+
+## Examples
+
+- [Basic usage](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/examples/basic_usage.py):
+  generating a video from Python with a progress callback
+- [Example script JSON](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/examples/photosynthesis_script.json):
+  a complete hand-editable Script, usable with `--script`
+- [Golden script fixture](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/tests/fixtures/golden_script.json):
+  the script the snapshot and determinism tests render
+- [.env.example](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/.env.example):
+  every environment variable the package reads

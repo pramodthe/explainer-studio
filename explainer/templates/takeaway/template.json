@@ -1,0 +1,22 @@
+{
+  "kind": "takeaway",
+  "name": "Key Takeaway",
+  "version": "1.0.0",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "bullets": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": ["bullets"]
+  },
+  "default_style": {
+    "bg": "#0d1b2a",
+    "accent": "#4fc3f7",
+    "font": "sans-serif"
+  }
+}

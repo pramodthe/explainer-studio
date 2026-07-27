@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Concept Template</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  background: var(--bg, #0d1b2a);
+  font-family: var(--font, sans-serif);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#stage {
+  width: 1280px;
+  height: 720px;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+}
+#diagram-area {
+  width: 480px;
+  height: 720px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+#diagram-area svg {
+  width: 400px;
+  height: 400px;
+}
+#bullets-area {
+  width: 800px;
+  height: 720px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 60px 80px 60px 40px;
+}
+.bullet-item {
+  font-size: 28px;
+  line-height: 1.5;
+  margin-bottom: 24px;
+  padding-left: 24px;
+  border-left: 4px solid var(--accent, #4fc3f7);
+  opacity: 0;
+  transform: translateX(20px);
+  transition: none;
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="diagram-area">
+    <svg id="diagram-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+  <div id="bullets-area"></div>
+</div>
+<script>
+(function() {
+  "use strict";
+
+  var _data = null;
+  var _style = null;
+  var _bulletEls = [];
+  var _diagramType = null;
+  var _diagramLabels = [];
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+  window.setSceneData = function(data, style) {
+    _data = data || {};
+    _style = style || {};
+
+    var root = document.documentElement;
+    root.style.setProperty("--bg", _style.bg || "#0d1b2a");
+    root.style.setProperty("--accent", _style.accent || "#4fc3f7");
+    root.style.setProperty("--font", _style.font || "sans-serif");
+    document.body.style.background = _style.bg || "#0d1b2a";
+
+    var bullets = _data.bullets || [];
+    var bulletsArea = document.getElementById("bullets-area");
+    bulletsArea.innerHTML = "";
+    _bulletEls = [];
+
+    for (var i = 0; i < bullets.length; i++) {
+      var el = document.createElement("div");
+      el.className = "bullet-item";
+      el.textContent = bullets[i];
+      el.style.borderLeftColor = _style.accent || "#4fc3f7";
+      bulletsArea.appendChild(el);
+      _bulletEls.push(el);
+    }
+
+    _diagramType = (_data.diagram && _data.diagram.type) ? _data.diagram.type : null;
+    _diagramLabels = (_data.diagram && _data.diagram.labels) ? _data.diagram.labels : [];
+
+    buildDiagram();
+  };
+
+  function buildDiagram() {
+    var svg = document.getElementById("diagram-svg");
+    var accent = (_style && _style.accent) ? _style.accent : "#4fc3f7";
+    svg.innerHTML = "";
+
+    if (_diagramType === "triangle") {
+      buildTriangle(svg, accent);
+    } else if (_diagramType === "cycle") {
+      buildCycle(svg, accent);
+    } else if (_diagramType === "flow") {
+      buildFlow(svg, accent);
+    }
+  }
+
+  function buildTriangle(svg, accent) {
+    var labels = _diagramLabels;
+    // Triangle vertices: top, bottom-left, bottom-right
+    var points = [
+      { x: 200, y: 60 },
+      { x: 60, y: 340 },
+      { x: 340, y: 340 }
+    ];
+
+    var polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    polygon.setAttribute("points", points.map(function(p) { return p.x + "," + p.y; }).join(" "));
+    polygon.setAttribute("fill", "none");
+    polygon.setAttribute("stroke", accent);
+    polygon.setAttribute("stroke-width", "3");
+    polygon.setAttribute("class", "diagram-shape");
+    svg.appendChild(polygon);
+
+    for (var i = 0; i < 3; i++) {
+      if (labels[i]) {
+        var text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        var offset = i === 0 ? { x: 0, y: -20 } : i === 1 ? { x: -10, y: 30 } : { x: 10, y: 30 };
+        text.setAttribute("x", points[i].x + offset.x);
+        text.setAttribute("y", points[i].y + offset.y);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("fill", "#ffffff");
+        text.setAttribute("font-size", "18");
+        text.setAttribute("font-family", "sans-serif");
+        text.setAttribute("class", "diagram-label");
+        text.textContent = labels[i];
+        svg.appendChild(text);
+      }
+    }
+  }
+
+  function buildCycle(svg, accent) {
+    var labels = _diagramLabels;
+    var count = labels.length || 3;
+    var cx = 200, cy = 200, r = 130;
+
+    // Draw nodes in a circle
+    for (var i = 0; i < count; i++) {
+      var angle = -Math.PI / 2 + (2 * Math.PI * i) / count;
+      var nx = cx + r * Math.cos(angle);
+      var ny = cy + r * Math.sin(angle);
+
+      // Node circle
+      var circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", nx);
+      circle.setAttribute("cy", ny);
+      circle.setAttribute("r", "30");
+      circle.setAttribute("fill", "none");
+      circle.setAttribute("stroke", accent);
+      circle.setAttribute("stroke-width", "2");
+      circle.setAttribute("class", "diagram-shape");
+      svg.appendChild(circle);
+
+      // Label
+      if (labels[i]) {
+        var text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", nx);
+        text.setAttribute("y", ny + 5);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("fill", "#ffffff");
+        text.setAttribute("font-size", "14");
+        text.setAttribute("font-family", "sans-serif");
+        text.setAttribute("class", "diagram-label");
+        text.textContent = labels[i];
+        svg.appendChild(text);
+      }
+
+      // Arrow to next node
+      var nextAngle = -Math.PI / 2 + (2 * Math.PI * ((i + 1) % count)) / count;
+      var nnx = cx + r * Math.cos(nextAngle);
+      var nny = cy + r * Math.sin(nextAngle);
+
+      // Arrow line (from edge of current circle to edge of next circle)
+      var dx = nnx - nx;
+      var dy = nny - ny;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var startX = nx + (dx / dist) * 32;
+      var startY = ny + (dy / dist) * 32;
+      var endX = nnx - (dx / dist) * 32;
+      var endY = nny - (dy / dist) * 32;
+
+      var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", startX);
+      line.setAttribute("y1", startY);
+      line.setAttribute("x2", endX);
+      line.setAttribute("y2", endY);
+      line.setAttribute("stroke", accent);
+      line.setAttribute("stroke-width", "2");
+      line.setAttribute("marker-end", "url(#arrowhead)");
+      line.setAttribute("class", "diagram-shape");
+      svg.appendChild(line);
+    }
+
+    // Arrowhead marker
+    var defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    var marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.setAttribute("id", "arrowhead");
+    marker.setAttribute("markerWidth", "10");
+    marker.setAttribute("markerHeight", "7");
+    marker.setAttribute("refX", "10");
+    marker.setAttribute("refY", "3.5");
+    marker.setAttribute("orient", "auto");
+    var arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    arrowPath.setAttribute("points", "0 0, 10 3.5, 0 7");
+    arrowPath.setAttribute("fill", accent);
+    marker.appendChild(arrowPath);
+    defs.appendChild(marker);
+    svg.insertBefore(defs, svg.firstChild);
+  }
+
+  function buildFlow(svg, accent) {
+    var labels = _diagramLabels;
+    var count = labels.length || 3;
+    var boxW = 90, boxH = 40;
+    var totalW = count * boxW + (count - 1) * 40;
+    var startX = (400 - totalW) / 2;
+    var cy = 200;
+
+    // Arrowhead marker
+    var defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    var marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.setAttribute("id", "arrowhead-flow");
+    marker.setAttribute("markerWidth", "10");
+    marker.setAttribute("markerHeight", "7");
+    marker.setAttribute("refX", "10");
+    marker.setAttribute("refY", "3.5");
+    marker.setAttribute("orient", "auto");
+    var arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    arrowPath.setAttribute("points", "0 0, 10 3.5, 0 7");
+    arrowPath.setAttribute("fill", accent);
+    marker.appendChild(arrowPath);
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+
+    for (var i = 0; i < count; i++) {
+      var x = startX + i * (boxW + 40);
+      var y = cy - boxH / 2;
+
+      // Box
+      var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", x);
+      rect.setAttribute("y", y);
+      rect.setAttribute("width", boxW);
+      rect.setAttribute("height", boxH);
+      rect.setAttribute("rx", "8");
+      rect.setAttribute("fill", "none");
+      rect.setAttribute("stroke", accent);
+      rect.setAttribute("stroke-width", "2");
+      rect.setAttribute("class", "diagram-shape");
+      svg.appendChild(rect);
+
+      // Label
+      if (labels[i]) {
+        var text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", x + boxW / 2);
+        text.setAttribute("y", cy + 5);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("fill", "#ffffff");
+        text.setAttribute("font-size", "14");
+        text.setAttribute("font-family", "sans-serif");
+        text.setAttribute("class", "diagram-label");
+        text.textContent = labels[i];
+        svg.appendChild(text);
+      }
+
+      // Arrow to next
+      if (i < count - 1) {
+        var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x + boxW);
+        line.setAttribute("y1", cy);
+        line.setAttribute("x2", x + boxW + 30);
+        line.setAttribute("y2", cy);
+        line.setAttribute("stroke", accent);
+        line.setAttribute("stroke-width", "2");
+        line.setAttribute("marker-end", "url(#arrowhead-flow)");
+        line.setAttribute("class", "diagram-shape");
+        svg.appendChild(line);
+      }
+    }
+  }
+
+  window.renderFrame = function(t) {
+    t = clamp(t, 0, 1);
+
+    // Diagram fades in during t=0 -> 0.3
+    var diagramOpacity = clamp(t / 0.3, 0, 1);
+    diagramOpacity = ease(diagramOpacity);
+    var diagramArea = document.getElementById("diagram-area");
+    diagramArea.style.opacity = diagramOpacity;
+
+    // Bullets reveal one by one from t=0.2 -> 0.9
+    var bulletCount = _bulletEls.length;
+    if (bulletCount > 0) {
+      var bulletStart = 0.2;
+      var bulletEnd = 0.9;
+      var bulletRange = bulletEnd - bulletStart;
+      var perBullet = bulletRange / bulletCount;
+
+      for (var i = 0; i < bulletCount; i++) {
+        var bStart = bulletStart + i * perBullet;
+        var bEnd = bStart + perBullet * 0.7;
+        var bProgress = clamp((t - bStart) / (bEnd - bStart), 0, 1);
+        bProgress = ease(bProgress);
+
+        _bulletEls[i].style.opacity = bProgress;
+        _bulletEls[i].style.transform = "translateX(" + lerp(20, 0, bProgress) + "px)";
+      }
+    }
+  };
+})();
+</script>
+</body>
+</html>

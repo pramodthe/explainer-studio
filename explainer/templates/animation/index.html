@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280,height=720">
+<title>Custom Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  font-family: var(--font, sans-serif);
+  background: var(--bg, #0d1b2a);
+  color: #ffffff;
+}
+.wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 64px;
+}
+#stage {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#stage svg { max-width: 100%; max-height: 100%; }
+#caption {
+  margin-top: 24px;
+  font-size: 26px;
+  line-height: 1.4;
+  text-align: center;
+  color: #e8eef5;
+  opacity: 0;
+}
+#error {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 12px 16px;
+  font: 14px/1.4 monospace;
+  color: #ffb4b4;
+  background: rgba(120, 0, 0, 0.35);
+  white-space: pre-wrap;
+  display: none;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="stage"></div>
+  <div id="caption"></div>
+</div>
+<div id="error"></div>
+
+<script>
+/*
+ * Host for model-authored scene graphics.
+ *
+ * setSceneData() injects the scene's markup/css and compiles its js into a
+ * draw(t) function. renderFrame(t) then calls draw(t) for every frame.
+ * draw(t) must be a pure function of t: the renderer steps t from 0 to 1 and
+ * screenshots each frame, so wall-clock time or randomness would break
+ * reproducibility.
+ */
+(function () {
+  "use strict";
+
+  var _draw = null;
+  var _caption = "";
+  var _accent = "#4fc3f7";
+
+  function showError(message) {
+    var el = document.getElementById("error");
+    el.textContent = String(message);
+    el.style.display = "block";
+  }
+
+  /** Populate the stage and compile the scene's draw(t). */
+  window.setSceneData = function (data, style) {
+    var _style = style || {};
+    document.body.style.setProperty("--bg", _style.bg || "#0d1b2a");
+    document.body.style.setProperty("--font", _style.font || "sans-serif");
+    _accent = _style.accent || "#4fc3f7";
+
+    data = data || {};
+    _caption = data.caption || "";
+
+    if (data.css) {
+      var styleEl = document.createElement("style");
+      styleEl.textContent = String(data.css);
+      document.head.appendChild(styleEl);
+    }
+
+    document.getElementById("stage").innerHTML = String(data.markup || "");
+    document.getElementById("caption").textContent = _caption;
+
+    try {
+      // The model supplies the body of draw(t). `accent` and `lerp`/`ease`
+      // helpers are in scope so scenes can match the deck's styling.
+      _draw = new Function(
+        "t",
+        "accent",
+        "lerp",
+        "ease",
+        "clamp",
+        "seg",
+        String(data.js || "")
+      );
+    } catch (err) {
+      _draw = null;
+      showError("Failed to compile draw(t): " + err.message);
+    }
+  };
+
+  function clamp(v, lo, hi) {
+    return v < lo ? lo : v > hi ? hi : v;
+  }
+  function lerp(a, b, u) {
+    return a + (b - a) * clamp(u, 0, 1);
+  }
+  function ease(u) {
+    u = clamp(u, 0, 1);
+    return 1 - Math.pow(1 - u, 3);
+  }
+  /** Map t onto a sub-interval [start, end] -> 0..1. */
+  function seg(t, start, end) {
+    if (end <= start) return t >= end ? 1 : 0;
+    return clamp((t - start) / (end - start), 0, 1);
+  }
+
+  /** Render one frame. Pure function of t. */
+  window.renderFrame = function (t) {
+    var u = clamp(Number(t) || 0, 0, 1);
+
+    // Caption fades in over the first 15% and holds.
+    document.getElementById("caption").style.opacity = _caption
+      ? ease(seg(u, 0, 0.15))
+      : 0;
+
+    if (!_draw) return;
+    try {
+      _draw(u, _accent, lerp, ease, clamp, seg);
+    } catch (err) {
+      showError("draw(t) threw at t=" + u.toFixed(3) + ": " + err.message);
+    }
+  };
+})();
+</script>
+</body>
+</html>

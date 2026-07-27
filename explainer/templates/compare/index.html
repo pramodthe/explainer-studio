@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Compare Template</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1280px; height: 720px; overflow: hidden; }
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d1b2a;
+  font-family: sans-serif;
+  color: #fff;
+}
+#stage {
+  width: 1280px;
+  height: 720px;
+  position: relative;
+  overflow: hidden;
+}
+#divider {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  width: 2px;
+  height: 80%;
+  background: rgba(255,255,255,0.3);
+  transform: translateX(-50%);
+}
+.column {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 60px 50px;
+}
+.column.left { left: 0; }
+.column.right { right: 0; left: 50%; }
+.column-header {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 30px;
+  white-space: nowrap;
+}
+.column.left .column-header { color: #4fc3f7; }
+.column.right .column-header { color: #ff8a65; }
+.point {
+  font-size: 22px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  padding-left: 20px;
+  position: relative;
+  opacity: 0;
+}
+.point::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.column.left .point::before { background: #4fc3f7; }
+.column.right .point::before { background: #ff8a65; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="divider"></div>
+  <div class="column left">
+    <div class="column-header" id="left-header"></div>
+    <div id="left-points"></div>
+  </div>
+  <div class="column right">
+    <div class="column-header" id="right-header"></div>
+    <div id="right-points"></div>
+  </div>
+</div>
+<script>
+(function() {
+  "use strict";
+
+  var sceneData = null;
+  var sceneStyle = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function ease(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+
+  window.setSceneData = function(data, style) {
+    sceneData = data;
+    sceneStyle = style || {};
+
+    var bg = sceneStyle.bg || "#0d1b2a";
+    var accent = sceneStyle.accent || "#4fc3f7";
+    var accent2 = sceneStyle.accent2 || "#ff8a65";
+    var font = sceneStyle.font || "sans-serif";
+
+    document.body.style.background = bg;
+    document.getElementById("stage").style.fontFamily = font;
+
+    var leftHeader = document.getElementById("left-header");
+    var rightHeader = document.getElementById("right-header");
+    leftHeader.textContent = data.left.label || "";
+    leftHeader.style.color = accent;
+    rightHeader.textContent = data.right.label || "";
+    rightHeader.style.color = accent2;
+
+    var leftContainer = document.getElementById("left-points");
+    var rightContainer = document.getElementById("right-points");
+    leftContainer.innerHTML = "";
+    rightContainer.innerHTML = "";
+
+    var leftPoints = data.left.points || [];
+    var rightPoints = data.right.points || [];
+
+    for (var i = 0; i < leftPoints.length; i++) {
+      var el = document.createElement("div");
+      el.className = "point";
+      el.textContent = leftPoints[i];
+      leftContainer.appendChild(el);
+    }
+    for (var i = 0; i < rightPoints.length; i++) {
+      var el = document.createElement("div");
+      el.className = "point";
+      el.textContent = rightPoints[i];
+      rightContainer.appendChild(el);
+    }
+  };
+
+  window.renderFrame = function(t) {
+    if (!sceneData) return;
+
+    var accent = (sceneStyle && sceneStyle.accent) || "#4fc3f7";
+    var accent2 = (sceneStyle && sceneStyle.accent2) || "#ff8a65";
+
+    // Headers slide in from sides during t=0 to 0.2
+    var headerProgress = clamp(t / 0.2, 0, 1);
+    var headerEased = ease(headerProgress);
+
+    var leftHeader = document.getElementById("left-header");
+    var rightHeader = document.getElementById("right-header");
+    var leftOffset = (1 - headerEased) * -200;
+    var rightOffset = (1 - headerEased) * 200;
+    leftHeader.style.transform = "translateX(" + leftOffset + "px)";
+    leftHeader.style.opacity = headerEased;
+    rightHeader.style.transform = "translateX(" + rightOffset + "px)";
+    rightHeader.style.opacity = headerEased;
+
+    // Points appear alternately from t=0.2 to t=0.9
+    var leftPoints = document.getElementById("left-points").children;
+    var rightPoints = document.getElementById("right-points").children;
+    var totalPoints = leftPoints.length + rightPoints.length;
+
+    if (totalPoints === 0) return;
+
+    var pointsStart = 0.2;
+    var pointsEnd = 0.9;
+    var pointsRange = pointsEnd - pointsStart;
+    var pointProgress = clamp((t - pointsStart) / pointsRange, 0, 1);
+
+    // Interleave: left[0], right[0], left[1], right[1], ...
+    var maxLen = Math.max(leftPoints.length, rightPoints.length);
+    var pointIndex = 0;
+    for (var i = 0; i < maxLen; i++) {
+      if (i < leftPoints.length) {
+        var threshold = pointIndex / totalPoints;
+        var localT = clamp((pointProgress - threshold) / (1 / totalPoints), 0, 1);
+        leftPoints[i].style.opacity = ease(localT);
+        leftPoints[i].style.transform = "translateY(" + ((1 - ease(localT)) * 15) + "px)";
+        pointIndex++;
+      }
+      if (i < rightPoints.length) {
+        var threshold = pointIndex / totalPoints;
+        var localT = clamp((pointProgress - threshold) / (1 / totalPoints), 0, 1);
+        rightPoints[i].style.opacity = ease(localT);
+        rightPoints[i].style.transform = "translateY(" + ((1 - ease(localT)) * 15) + "px)";
+        pointIndex++;
+      }
+    }
+
+    // Divider fades in with headers
+    document.getElementById("divider").style.opacity = headerEased;
+  };
+})();
+</script>
+</body>
+</html>

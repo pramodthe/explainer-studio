@@ -1,0 +1,58 @@
+{
+  "topic": "Photosynthesis: How Plants Eat Sunlight",
+  "language": "en",
+  "audience": "student",
+  "scenes": [
+    {
+      "id": 1,
+      "kind": "title",
+      "title": "Photosynthesis",
+      "narration": "Every second, the green plants around you are quietly performing one of the most important chemical reactions on Earth: photosynthesis. Let's see how it works.",
+      "data": {
+        "subtitle": "How plants turn sunlight into food"
+      }
+    },
+    {
+      "id": 2,
+      "kind": "concept",
+      "title": "The Big Picture",
+      "narration": "Photosynthesis happens in tiny green structures called chloroplasts. The plant takes in carbon dioxide from the air, and water from the soil. Using energy from sunlight, it transforms them into glucose, its food, and releases oxygen, the very air we breathe.",
+      "data": {
+        "bullets": [
+          "Occurs in chloroplasts",
+          "Inputs: CO₂ + H₂O + sunlight",
+          "Outputs: glucose + O₂"
+        ],
+        "diagram": {
+          "type": "cycle",
+          "labels": ["Sunlight", "CO₂", "H₂O", "Glucose", "O₂"]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "kind": "steps",
+      "title": "Two Stages",
+      "narration": "The process has two stages. First, the light reactions: chlorophyll captures sunlight and splits water molecules, releasing oxygen and storing energy. Second, the Calvin cycle: using that stored energy, the plant fixes carbon dioxide and builds glucose.",
+      "data": {
+        "steps": [
+          "Light reactions: chlorophyll captures sunlight, splits H₂O → O₂ + energy",
+          "Calvin cycle: uses stored energy to fix CO₂ → glucose"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "kind": "takeaway",
+      "title": "Why It Matters",
+      "narration": "So remember this: photosynthesis converts light energy into chemical energy, produces nearly all the oxygen in our atmosphere, and feeds almost every food chain on the planet. One simple equation, powering nearly all life on Earth.",
+      "data": {
+        "bullets": [
+          "Converts light → chemical energy",
+          "Produces most atmospheric O₂",
+          "Foundation of nearly all food chains"
+        ]
+      }
+    }
+  ]
+}

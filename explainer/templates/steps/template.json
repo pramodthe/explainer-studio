@@ -1,0 +1,22 @@
+{
+  "kind": "steps",
+  "name": "Step-by-Step",
+  "version": "1.0.0",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "steps": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": ["steps"]
+  },
+  "default_style": {
+    "bg": "#0d1b2a",
+    "accent": "#4fc3f7",
+    "font": "sans-serif"
+  }
+}

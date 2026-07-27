@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280,height=720">
+<title>Key Takeaway</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  font-family: var(--font, sans-serif);
+  background: var(--bg, #0d1b2a);
+  color: #ffffff;
+}
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 80px 120px;
+}
+.header {
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--accent, #4fc3f7);
+  margin-bottom: 48px;
+  opacity: 0;
+  transform: translateY(16px);
+}
+.bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  flex: 1;
+  justify-content: flex-start;
+}
+.bullet-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  opacity: 0;
+  transform: translateX(-20px);
+}
+.bullet-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin-top: 4px;
+}
+.bullet-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.bullet-text {
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #eceff1;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header" id="header">Key Takeaway</div>
+  <div class="bullets" id="bullets"></div>
+</div>
+<script>
+(function() {
+  "use strict";
+
+  var bullets = [];
+  var bulletElements = [];
+
+  // Utility: clamp value between min and max
+  function clamp(v, lo, hi) {
+    return v < lo ? lo : v > hi ? hi : v;
+  }
+
+  // Utility: ease-out cubic
+  function easeOut(x) {
+    return 1 - (1 - x) * (1 - x) * (1 - x);
+  }
+
+  // Utility: compute sub-progress within a window [start, end]
+  function seg(t, start, end) {
+    if (end <= start) return 1;
+    return clamp((t - start) / (end - start), 0, 1);
+  }
+
+  // Checkmark SVG icon (inline, no external resources)
+  function checkmarkSVG(accent) {
+    return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">' +
+      '<circle cx="16" cy="16" r="14" fill="none" stroke="' + accent + '" stroke-width="2.5"/>' +
+      '<polyline points="10,16 14,21 22,12" fill="none" stroke="' + accent + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</svg>';
+  }
+
+  /**
+   * Called once before frame capture begins.
+   * Populates DOM with scene data.
+   * @param {object} data - Scene data with bullets array
+   * @param {object} style - Style overrides (bg, accent, font)
+   */
+  window.setSceneData = function(data, style) {
+    var accent = (style && style.accent) || "#4fc3f7";
+
+    // Apply style overrides
+    if (style) {
+      if (style.bg) document.body.style.setProperty("--bg", style.bg);
+      if (style.accent) document.body.style.setProperty("--accent", style.accent);
+      if (style.font) document.body.style.setProperty("--font", style.font);
+    }
+
+    // Set header from scene title if provided
+    var headerEl = document.getElementById("header");
+    if (data && data.title) {
+      headerEl.textContent = data.title;
+    }
+
+    // Build bullet items
+    bullets = (data && data.bullets) || [];
+    var bulletsContainer = document.getElementById("bullets");
+    bulletsContainer.innerHTML = "";
+    bulletElements = [];
+
+    for (var i = 0; i < bullets.length; i++) {
+      var item = document.createElement("div");
+      item.className = "bullet-item";
+
+      var icon = document.createElement("div");
+      icon.className = "bullet-icon";
+      icon.innerHTML = checkmarkSVG(accent);
+
+      var text = document.createElement("div");
+      text.className = "bullet-text";
+      text.textContent = bullets[i];
+
+      item.appendChild(icon);
+      item.appendChild(text);
+      bulletsContainer.appendChild(item);
+      bulletElements.push(item);
+    }
+  };
+
+  /**
+   * Called per frame. Renders visual state at progress t in [0, 1].
+   * Pure function of t — deterministic, no side effects beyond DOM updates.
+   *
+   * Animation timeline:
+   *   t = 0.0 → 0.15: Header fades in
+   *   t = 0.15 → 0.9: Bullets appear sequentially (evenly spaced)
+   *   t = 0.9 → 1.0: Hold (all visible)
+   *
+   * @param {number} t - Progress value in [0, 1]
+   */
+  window.renderFrame = function(t) {
+    var headerEl = document.getElementById("header");
+
+    // Phase 1: Header fade-in (0 → 0.15)
+    var headerProgress = easeOut(seg(t, 0, 0.15));
+    headerEl.style.opacity = headerProgress;
+    headerEl.style.transform = "translateY(" + (16 * (1 - headerProgress)) + "px)";
+
+    // Phase 2: Bullets appear sequentially (0.15 → 0.9)
+    var numBullets = bulletElements.length;
+    if (numBullets === 0) return;
+
+    var bulletWindow = 0.75; // total time for all bullets (0.15 to 0.9)
+    var perBullet = bulletWindow / numBullets;
+
+    for (var i = 0; i < numBullets; i++) {
+      var bulletStart = 0.15 + i * perBullet;
+      var bulletEnd = bulletStart + perBullet * 0.7; // each bullet animates over 70% of its slot
+      var bp = easeOut(seg(t, bulletStart, bulletEnd));
+
+      bulletElements[i].style.opacity = bp;
+      bulletElements[i].style.transform = "translateX(" + (-20 * (1 - bp)) + "px)";
+    }
+
+    // Phase 3: Hold (0.9 → 1.0) — everything stays fully visible
+  };
+})();
+</script>
+</body>
+</html>

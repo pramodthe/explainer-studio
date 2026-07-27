@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chart Template</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1280px; height: 720px; overflow: hidden; }
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d1b2a;
+  font-family: sans-serif;
+  color: #fff;
+}
+#stage {
+  width: 1280px;
+  height: 720px;
+  position: relative;
+  overflow: hidden;
+}
+#chart-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 720px;
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <svg id="chart-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid meet"></svg>
+</div>
+<script>
+(function() {
+  "use strict";
+
+  var sceneData = null;
+  var sceneStyle = null;
+
+  // Chart layout constants
+  var MARGIN_LEFT = 100;
+  var MARGIN_RIGHT = 80;
+  var MARGIN_TOP = 80;
+  var MARGIN_BOTTOM = 100;
+  var CHART_WIDTH = 1280 - MARGIN_LEFT - MARGIN_RIGHT;
+  var CHART_HEIGHT = 720 - MARGIN_TOP - MARGIN_BOTTOM;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function ease(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+
+  function createSVGElement(tag) {
+    return document.createElementNS("http://www.w3.org/2000/svg", tag);
+  }
+
+  window.setSceneData = function(data, style) {
+    sceneData = data;
+    sceneStyle = style || {};
+
+    var bg = sceneStyle.bg || "#0d1b2a";
+    document.body.style.background = bg;
+    document.getElementById("stage").style.fontFamily = sceneStyle.font || "sans-serif";
+  };
+
+  window.renderFrame = function(t) {
+    if (!sceneData) return;
+
+    var svg = document.getElementById("chart-svg");
+    svg.innerHTML = "";
+
+    var accent = (sceneStyle && sceneStyle.accent) || "#4fc3f7";
+    var chartType = sceneData.chart_type || "bar";
+    var labels = sceneData.labels || [];
+    var values = sceneData.values || [];
+    var n = Math.min(labels.length, values.length);
+
+    if (n === 0) return;
+
+    var maxVal = 0;
+    for (var i = 0; i < n; i++) {
+      if (values[i] > maxVal) maxVal = values[i];
+    }
+    if (maxVal === 0) maxVal = 1;
+
+    // Labels appear during t=0 to 0.1
+    var labelOpacity = clamp(t / 0.1, 0, 1);
+
+    // Y-axis scale (5 ticks)
+    var tickCount = 5;
+    for (var i = 0; i <= tickCount; i++) {
+      var yVal = (maxVal / tickCount) * i;
+      var yPos = MARGIN_TOP + CHART_HEIGHT - (CHART_HEIGHT * (i / tickCount));
+
+      // Grid line
+      var gridLine = createSVGElement("line");
+      gridLine.setAttribute("x1", MARGIN_LEFT);
+      gridLine.setAttribute("y1", yPos);
+      gridLine.setAttribute("x2", MARGIN_LEFT + CHART_WIDTH);
+      gridLine.setAttribute("y2", yPos);
+      gridLine.setAttribute("stroke", "rgba(255,255,255,0.1)");
+      gridLine.setAttribute("stroke-width", "1");
+      gridLine.setAttribute("opacity", labelOpacity);
+      svg.appendChild(gridLine);
+
+      // Y label
+      var yLabel = createSVGElement("text");
+      yLabel.setAttribute("x", MARGIN_LEFT - 15);
+      yLabel.setAttribute("y", yPos + 5);
+      yLabel.setAttribute("text-anchor", "end");
+      yLabel.setAttribute("fill", "rgba(255,255,255,0.7)");
+      yLabel.setAttribute("font-size", "14");
+      yLabel.setAttribute("font-family", (sceneStyle && sceneStyle.font) || "sans-serif");
+      yLabel.setAttribute("opacity", labelOpacity);
+      yLabel.textContent = Math.round(yVal);
+      svg.appendChild(yLabel);
+    }
+
+    // X-axis line
+    var xAxis = createSVGElement("line");
+    xAxis.setAttribute("x1", MARGIN_LEFT);
+    xAxis.setAttribute("y1", MARGIN_TOP + CHART_HEIGHT);
+    xAxis.setAttribute("x2", MARGIN_LEFT + CHART_WIDTH);
+    xAxis.setAttribute("y2", MARGIN_TOP + CHART_HEIGHT);
+    xAxis.setAttribute("stroke", "rgba(255,255,255,0.3)");
+    xAxis.setAttribute("stroke-width", "2");
+    xAxis.setAttribute("opacity", labelOpacity);
+    svg.appendChild(xAxis);
+
+    // Y-axis line
+    var yAxis = createSVGElement("line");
+    yAxis.setAttribute("x1", MARGIN_LEFT);
+    yAxis.setAttribute("y1", MARGIN_TOP);
+    yAxis.setAttribute("x2", MARGIN_LEFT);
+    yAxis.setAttribute("y2", MARGIN_TOP + CHART_HEIGHT);
+    yAxis.setAttribute("stroke", "rgba(255,255,255,0.3)");
+    yAxis.setAttribute("stroke-width", "2");
+    yAxis.setAttribute("opacity", labelOpacity);
+    svg.appendChild(yAxis);
+
+    // Growth progress for data (t=0.1 to 1.0)
+    var growthT = clamp((t - 0.1) / 0.9, 0, 1);
+    var growthEased = ease(growthT);
+
+    if (chartType === "bar") {
+      var barWidth = (CHART_WIDTH / n) * 0.6;
+      var gap = (CHART_WIDTH / n) * 0.4;
+
+      for (var i = 0; i < n; i++) {
+        var x = MARGIN_LEFT + (CHART_WIDTH / n) * i + gap / 2;
+        var fullHeight = (values[i] / maxVal) * CHART_HEIGHT;
+        var barHeight = fullHeight * growthEased;
+        var y = MARGIN_TOP + CHART_HEIGHT - barHeight;
+
+        // Bar
+        var rect = createSVGElement("rect");
+        rect.setAttribute("x", x);
+        rect.setAttribute("y", y);
+        rect.setAttribute("width", barWidth);
+        rect.setAttribute("height", barHeight);
+        rect.setAttribute("fill", accent);
+        rect.setAttribute("rx", "3");
+        rect.setAttribute("ry", "3");
+        svg.appendChild(rect);
+
+        // Value label on top of bar
+        if (growthEased > 0.05) {
+          var valLabel = createSVGElement("text");
+          valLabel.setAttribute("x", x + barWidth / 2);
+          valLabel.setAttribute("y", y - 10);
+          valLabel.setAttribute("text-anchor", "middle");
+          valLabel.setAttribute("fill", accent);
+          valLabel.setAttribute("font-size", "16");
+          valLabel.setAttribute("font-weight", "bold");
+          valLabel.setAttribute("font-family", (sceneStyle && sceneStyle.font) || "sans-serif");
+          valLabel.setAttribute("opacity", clamp(growthEased * 2, 0, 1));
+          valLabel.textContent = Math.round(values[i] * growthEased);
+          svg.appendChild(valLabel);
+        }
+
+        // X-axis label
+        var xLabel = createSVGElement("text");
+        xLabel.setAttribute("x", x + barWidth / 2);
+        xLabel.setAttribute("y", MARGIN_TOP + CHART_HEIGHT + 30);
+        xLabel.setAttribute("text-anchor", "middle");
+        xLabel.setAttribute("fill", "rgba(255,255,255,0.8)");
+        xLabel.setAttribute("font-size", "16");
+        xLabel.setAttribute("font-family", (sceneStyle && sceneStyle.font) || "sans-serif");
+        xLabel.setAttribute("opacity", labelOpacity);
+        xLabel.textContent = labels[i];
+        svg.appendChild(xLabel);
+      }
+    } else if (chartType === "line") {
+      // Line chart: progressive point-by-point reveal
+      var pointSpacing = CHART_WIDTH / (n - 1 || 1);
+      var points = [];
+
+      for (var i = 0; i < n; i++) {
+        var x = MARGIN_LEFT + pointSpacing * i;
+        var fullY = MARGIN_TOP + CHART_HEIGHT - (values[i] / maxVal) * CHART_HEIGHT;
+        var baseY = MARGIN_TOP + CHART_HEIGHT;
+        var y = baseY + (fullY - baseY) * growthEased;
+        points.push({ x: x, y: y });
+      }
+
+      // How many points are revealed based on t
+      var revealedCount = Math.ceil(n * growthEased);
+
+      if (revealedCount > 1) {
+        // Draw polyline for revealed points
+        var polyPoints = [];
+        for (var i = 0; i < revealedCount && i < points.length; i++) {
+          polyPoints.push(points[i].x + "," + points[i].y);
+        }
+
+        var polyline = createSVGElement("polyline");
+        polyline.setAttribute("points", polyPoints.join(" "));
+        polyline.setAttribute("fill", "none");
+        polyline.setAttribute("stroke", accent);
+        polyline.setAttribute("stroke-width", "3");
+        polyline.setAttribute("stroke-linecap", "round");
+        polyline.setAttribute("stroke-linejoin", "round");
+        svg.appendChild(polyline);
+
+        // Fill area under the line
+        var areaPoints = polyPoints.slice();
+        areaPoints.push(points[revealedCount - 1].x + "," + (MARGIN_TOP + CHART_HEIGHT));
+        areaPoints.push(points[0].x + "," + (MARGIN_TOP + CHART_HEIGHT));
+
+        var polygon = createSVGElement("polygon");
+        polygon.setAttribute("points", areaPoints.join(" "));
+        polygon.setAttribute("fill", accent);
+        polygon.setAttribute("opacity", "0.15");
+        svg.appendChild(polygon);
+      }
+
+      // Draw dots at revealed points
+      for (var i = 0; i < revealedCount && i < points.length; i++) {
+        var circle = createSVGElement("circle");
+        circle.setAttribute("cx", points[i].x);
+        circle.setAttribute("cy", points[i].y);
+        circle.setAttribute("r", "5");
+        circle.setAttribute("fill", accent);
+        svg.appendChild(circle);
+
+        // Value label above point
+        if (growthEased > 0.05) {
+          var valLabel = createSVGElement("text");
+          valLabel.setAttribute("x", points[i].x);
+          valLabel.setAttribute("y", points[i].y - 15);
+          valLabel.setAttribute("text-anchor", "middle");
+          valLabel.setAttribute("fill", accent);
+          valLabel.setAttribute("font-size", "14");
+          valLabel.setAttribute("font-weight", "bold");
+          valLabel.setAttribute("font-family", (sceneStyle && sceneStyle.font) || "sans-serif");
+          valLabel.setAttribute("opacity", clamp(growthEased * 2, 0, 1));
+          valLabel.textContent = Math.round(values[i] * growthEased);
+          svg.appendChild(valLabel);
+        }
+      }
+
+      // X-axis labels
+      for (var i = 0; i < n; i++) {
+        var x = MARGIN_LEFT + pointSpacing * i;
+        var xLabel = createSVGElement("text");
+        xLabel.setAttribute("x", x);
+        xLabel.setAttribute("y", MARGIN_TOP + CHART_HEIGHT + 30);
+        xLabel.setAttribute("text-anchor", "middle");
+        xLabel.setAttribute("fill", "rgba(255,255,255,0.8)");
+        xLabel.setAttribute("font-size", "16");
+        xLabel.setAttribute("font-family", (sceneStyle && sceneStyle.font) || "sans-serif");
+        xLabel.setAttribute("opacity", labelOpacity);
+        xLabel.textContent = labels[i];
+        svg.appendChild(xLabel);
+      }
+    }
+  };
+})();
+</script>
+</body>
+</html>

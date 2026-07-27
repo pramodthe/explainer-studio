@@ -1,0 +1,62 @@
+site_name: Explainer Studio
+site_url: https://pramodthe.github.io/explainer-studio/
+site_description: Turn any topic into a narrated, animated educational explainer video.
+repo_url: https://github.com/pramodthe/explainer-studio
+repo_name: pramodthe/explainer-studio
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Quick Start: quickstart.md
+  - CLI Reference: cli.md
+  - Python API: api.md
+  - Templates: templates.md
+  - Providers: providers.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/pramodthe/explainer-studio
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/explainer-studio/

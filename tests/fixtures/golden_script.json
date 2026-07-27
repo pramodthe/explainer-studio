@@ -1,0 +1,43 @@
+{
+  "topic": "Water Cycle",
+  "language": "en",
+  "audience": "student",
+  "scenes": [
+    {
+      "id": 1,
+      "kind": "title",
+      "title": "The Water Cycle",
+      "narration": "Welcome to a brief overview of the water cycle.",
+      "data": {},
+      "duration_hint": 2.0
+    },
+    {
+      "id": 2,
+      "kind": "concept",
+      "title": "Evaporation and Condensation",
+      "narration": "Water evaporates from oceans and condenses into clouds.",
+      "data": {
+        "bullets": [
+          "Evaporation: liquid to gas",
+          "Condensation: gas to liquid",
+          "Clouds form from condensation"
+        ]
+      },
+      "duration_hint": 2.0
+    },
+    {
+      "id": 3,
+      "kind": "takeaway",
+      "title": "Key Takeaway",
+      "narration": "The water cycle keeps our planet alive and healthy.",
+      "data": {
+        "bullets": [
+          "Water cycles continuously",
+          "Evaporation and condensation drive the cycle",
+          "Essential for life on Earth"
+        ]
+      },
+      "duration_hint": 1.0
+    }
+  ]
+}
