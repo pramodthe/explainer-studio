@@ -492,12 +492,22 @@ class Pipeline:
                 )
             )
 
-        composer = Composer(fps=fps, resolution=resolution)
+        # Crossfade over the silent tail pad only, so transitions never eat
+        # into spoken narration (audio-first timing invariant).
+        composer = Composer(
+            fps=fps, resolution=resolution, transition=_TAIL_PAD_SECONDS
+        )
         music_path = Path(music) if music else None
+
+        # The narration stage already measured each scene; hand those durations
+        # to the composer so it need not re-probe every segment with ffprobe.
+        durations = [duration_map[scene.id] for scene in script.scenes]
 
         # Compose to work_dir/output.mp4
         work_output = work_dir / "output.mp4"
-        composer.compose(comp_jobs, work_dir, work_output, music=music_path)
+        composer.compose(
+            comp_jobs, work_dir, work_output, music=music_path, durations=durations
+        )
 
         # Copy to final output location
         output_path.parent.mkdir(parents=True, exist_ok=True)

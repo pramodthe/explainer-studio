@@ -74,6 +74,8 @@ desktop.ini
 *.mkv
 *.webm
 *.wav
+# Showcase clips in samples/ are tracked on purpose.
+!samples/*.mp4
 # Generated narration audio. Template preview.png files under
 # explainer/templates/ are tracked assets and must NOT be ignored.
 scene_*.mp3

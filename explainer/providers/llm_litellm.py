@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 _SYSTEM_PROMPT_PATH = _PROMPTS_DIR / "script_system.md"
 
-_TIMEOUT_SECONDS = 30
+_TIMEOUT_SECONDS = 300
 
 
 def _load_system_prompt() -> str:

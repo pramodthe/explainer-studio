@@ -23,7 +23,7 @@ explainer generate <topic> [OPTIONS]
 | `--lang` | string | `en` | Language code (BCP-47, e.g., `en`, `zh-CN`, `es`) |
 | `--audience` | choice | `student` | Target audience: `kid`, `student`, or `adult` |
 | `--duration` | int | `60` | Target video duration in seconds: `30`, `60`, or `90` |
-| `--fps` | int | `15` | Frame rate: `15`, `24`, or `30` |
+| `--fps` | int | `24` | Frame rate: `15`, `24`, or `30` |
 | `--res` | string | `720p` | Resolution: `720p`, `1080p`, or `vertical` (720×1280) |
 | `--llm` | string | None | LLM model string (e.g., `openai/gpt-5.6`, `gemini/gemini-3.6-flash`) |
 | `--tts` | string | `edge` | TTS provider name: `edge`, `elevenlabs`, `azure`, `openai` |
@@ -220,7 +220,7 @@ Located at `~/.explainer/config.toml`:
 llm = "openai/gpt-5.6"
 tts = "edge"
 voice = "en-US-GuyNeural"
-fps = 15
+fps = 24
 resolution = "720p"
 
 [keys]

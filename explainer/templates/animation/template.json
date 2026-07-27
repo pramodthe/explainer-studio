@@ -1,7 +1,7 @@
 {
   "kind": "animation",
   "name": "Custom Animation",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "schema": {
     "type": "object",
     "properties": {
@@ -15,7 +15,7 @@
       },
       "js": {
         "type": "string",
-        "description": "Body of function draw(t) with t in [0,1]. Must be a pure function of t: no Date, no Math.random, no timers, no network."
+        "description": "Body of function draw(t) with t in [0,1]. Must be a pure function of t: no Date, no Math.random, no timers, no network. In scope: accent, lerp, ease, clamp, seg, and the fx motion library (fx.pop/appear/vanish/glide/draw/type/count/pulse/camera/op/attr/el, fx.seg/lerp/ease/easeIn/easeInOut/clamp)."
       },
       "caption": {
         "type": "string",

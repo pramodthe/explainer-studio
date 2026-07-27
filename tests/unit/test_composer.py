@@ -70,15 +70,10 @@ class TestConcatFileGeneration:
         work_dir.mkdir()
         out_path = tmp_path / "output.mp4"
 
+        # Single scene: no transitions, so the concat-demuxer path is used.
         scenes = [
             CompositionJob(
                 scene_id=1, frames_dir=tmp_path / "s1", audio_path=tmp_path / "a1.mp3"
-            ),
-            CompositionJob(
-                scene_id=2, frames_dir=tmp_path / "s2", audio_path=tmp_path / "a2.mp3"
-            ),
-            CompositionJob(
-                scene_id=3, frames_dir=tmp_path / "s3", audio_path=tmp_path / "a3.mp3"
             ),
         ]
 
@@ -90,12 +85,10 @@ class TestConcatFileGeneration:
 
         content = concat_file.read_text()
         lines = content.strip().split("\n")
-        assert len(lines) == 3
+        assert len(lines) == 1
 
         segments_dir = work_dir / "segments"
         assert lines[0] == f"file '{segments_dir / 'seg1.mp4'}'"
-        assert lines[1] == f"file '{segments_dir / 'seg2.mp4'}'"
-        assert lines[2] == f"file '{segments_dir / 'seg3.mp4'}'"
 
     @patch("explainer.core.composer.subprocess.run")
     def test_segments_dir_created(self, mock_run: MagicMock, tmp_path: Path) -> None:
@@ -159,6 +152,9 @@ class TestFfmpegSubprocessCalls:
         assert "yuv420p" in cmd
         assert "-c:a" in cmd
         assert "aac" in cmd
+        # apad + shortest keeps the tail-pad silence: the audio is padded so
+        # -shortest cuts on the (longer) frame track, not the narration MP3.
+        assert cmd[cmd.index("-af") + 1] == "apad"
         assert "-shortest" in cmd
         assert "-map_metadata" in cmd
         assert "-1" in cmd
@@ -230,6 +226,147 @@ class TestFfmpegSubprocessCalls:
         assert "amix" in filter_val
         assert str(music_path) in cmd
         assert str(out_path) == cmd[-1]
+
+
+class TestTransitionsJoin:
+    """Tests for the xfade/acrossfade multi-scene join path."""
+
+    def _three_scenes(self, tmp_path: Path) -> list[CompositionJob]:
+        return [
+            CompositionJob(
+                scene_id=i,
+                frames_dir=tmp_path / f"s{i}",
+                audio_path=tmp_path / f"a{i}.mp3",
+            )
+            for i in range(1, 4)
+        ]
+
+    @patch.object(Composer, "_probe_duration", return_value=4.0)
+    @patch("explainer.core.composer.subprocess.run")
+    def test_xfade_filter_chain(
+        self, mock_run: MagicMock, _mock_probe: MagicMock, tmp_path: Path
+    ) -> None:
+        """Multi-scene compose builds an xfade/acrossfade filter with right offsets."""
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+
+        work_dir = tmp_path / "work"
+        work_dir.mkdir()
+        out_path = tmp_path / "output.mp4"
+
+        composer = Composer(fps=15, resolution="720p")
+        composer.compose(self._three_scenes(tmp_path), work_dir, out_path)
+
+        # 3 segment encodes, then the join call
+        join_call = mock_run.call_args_list[3]
+        cmd = join_call[0][0]
+
+        assert cmd[0] == "ffmpeg"
+        filter_val = cmd[cmd.index("-filter_complex") + 1]
+        # Durations of 4.0s each, fade 0.5s → offsets 3.5 and 7.0
+        assert "xfade=transition=fade:duration=0.500:offset=3.500" in filter_val
+        assert "xfade=transition=fade:duration=0.500:offset=7.000" in filter_val
+        assert filter_val.count("acrossfade=d=0.500") == 2
+        assert "[v2]" in cmd
+        assert "[a2]" in cmd
+        assert str(out_path) == cmd[-1]
+
+    @patch.object(Composer, "_probe_duration", return_value=4.0)
+    @patch("explainer.core.composer.subprocess.run")
+    def test_no_concat_file_for_transitions(
+        self, mock_run: MagicMock, _mock_probe: MagicMock, tmp_path: Path
+    ) -> None:
+        """The transition path does not write concat.txt."""
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+
+        work_dir = tmp_path / "work"
+        work_dir.mkdir()
+
+        composer = Composer(fps=15, resolution="720p")
+        composer.compose(
+            self._three_scenes(tmp_path), work_dir, tmp_path / "output.mp4"
+        )
+
+        assert not (work_dir / "concat.txt").exists()
+
+    @patch("explainer.core.composer.subprocess.run")
+    def test_transition_zero_uses_concat_demuxer(
+        self, mock_run: MagicMock, tmp_path: Path
+    ) -> None:
+        """transition=0 falls back to the concat demuxer with stream copy."""
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+
+        work_dir = tmp_path / "work"
+        work_dir.mkdir()
+
+        composer = Composer(fps=15, resolution="720p", transition=0)
+        composer.compose(
+            self._three_scenes(tmp_path), work_dir, tmp_path / "output.mp4"
+        )
+
+        concat_call = mock_run.call_args_list[3]
+        cmd = concat_call[0][0]
+        assert cmd[cmd.index("-f") + 1] == "concat"
+        assert "copy" in cmd
+        assert (work_dir / "concat.txt").exists()
+
+    @patch.object(Composer, "_probe_duration", return_value=0.8)
+    @patch("explainer.core.composer.subprocess.run")
+    def test_fade_clamped_to_half_shortest_scene(
+        self, mock_run: MagicMock, _mock_probe: MagicMock, tmp_path: Path
+    ) -> None:
+        """The fade never exceeds half of the shortest segment."""
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+
+        work_dir = tmp_path / "work"
+        work_dir.mkdir()
+
+        composer = Composer(fps=15, resolution="720p")
+        composer.compose(
+            self._three_scenes(tmp_path), work_dir, tmp_path / "output.mp4"
+        )
+
+        join_call = mock_run.call_args_list[3]
+        filter_val = join_call[0][0][join_call[0][0].index("-filter_complex") + 1]
+        # min(0.5, 0.8 / 2) = 0.4
+        assert "duration=0.400" in filter_val
+        assert "acrossfade=d=0.400" in filter_val
+
+    @patch.object(Composer, "_probe_duration")
+    @patch("explainer.core.composer.subprocess.run")
+    def test_durations_arg_bypasses_ffprobe(
+        self, mock_run: MagicMock, mock_probe: MagicMock, tmp_path: Path
+    ) -> None:
+        """Passing durations drives the offsets and skips ffprobe entirely."""
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+        mock_probe.side_effect = AssertionError("_probe_duration must not be called")
+
+        work_dir = tmp_path / "work"
+        work_dir.mkdir()
+        out_path = tmp_path / "output.mp4"
+
+        composer = Composer(fps=15, resolution="720p")
+        composer.compose(
+            self._three_scenes(tmp_path),
+            work_dir,
+            out_path,
+            durations=[4.0, 4.0, 4.0],
+        )
+
+        mock_probe.assert_not_called()
+        join_call = mock_run.call_args_list[3]
+        filter_val = join_call[0][0][join_call[0][0].index("-filter_complex") + 1]
+        assert "xfade=transition=fade:duration=0.500:offset=3.500" in filter_val
+        assert "xfade=transition=fade:duration=0.500:offset=7.000" in filter_val
 
 
 class TestCompositionError:

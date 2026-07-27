@@ -439,7 +439,7 @@ class TestLiteLLMProvider:
             provider.generate_script(request)
 
         call_kwargs = mock_comp.call_args[1]
-        assert call_kwargs["timeout"] == 30
+        assert call_kwargs["timeout"] == 300
 
 
 # ---------------------------------------------------------------------------

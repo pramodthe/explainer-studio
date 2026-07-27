@@ -68,6 +68,11 @@ html, body {
  * draw(t) must be a pure function of t: the renderer steps t from 0 to 1 and
  * screenshots each frame, so wall-clock time or randomness would break
  * reproducibility.
+ *
+ * draw(t) receives the deck's `accent` colour, the primitive helpers
+ * `lerp`/`ease`/`clamp`/`seg`, and `fx` — a small motion-graphics library
+ * (fades, pops, glides, stroke-drawing, typewriter, counters, camera zoom).
+ * Every fx helper is itself a pure function of t.
  */
 (function () {
   "use strict";
@@ -81,6 +86,160 @@ html, body {
     el.textContent = String(message);
     el.style.display = "block";
   }
+
+  /* ---------------- timeline math (pure functions of their inputs) ---------------- */
+
+  function clamp(v, lo, hi) {
+    return v < lo ? lo : v > hi ? hi : v;
+  }
+  function lerp(a, b, u) {
+    return a + (b - a) * clamp(u, 0, 1);
+  }
+  function ease(u) {
+    u = clamp(u, 0, 1);
+    return 1 - Math.pow(1 - u, 3);
+  }
+  function easeIn(u) {
+    u = clamp(u, 0, 1);
+    return u * u * u;
+  }
+  function easeInOut(u) {
+    u = clamp(u, 0, 1);
+    return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+  }
+  /** Map t onto a sub-interval [start, end] -> 0..1. */
+  function seg(t, start, end) {
+    if (end <= start) return t >= end ? 1 : 0;
+    return clamp((t - start) / (end - start), 0, 1);
+  }
+
+  /* ---------------- fx: motion-graphics helpers for draw(t) ----------------
+   * Every helper sets DOM state purely from t. Helpers that write transforms
+   * (pop, glide, move, pulse) each own the element's `transform` style —
+   * combine effects by nesting elements (<g> or <div>) instead of applying
+   * two transform helpers to one element.
+   */
+
+  function fxEl(id) {
+    return document.getElementById(id);
+  }
+
+  function fxPrep(target) {
+    // Intuitive transform origin for SVG children and HTML alike.
+    target.style.transformBox = "fill-box";
+    target.style.transformOrigin = "center";
+  }
+
+  function fxOp(id, v) {
+    var target = fxEl(id);
+    if (target) target.style.opacity = String(clamp(v, 0, 1));
+  }
+
+  function fxMove(id, x, y) {
+    var target = fxEl(id);
+    if (!target) return;
+    fxPrep(target);
+    target.style.transform = "translate(" + x + "px, " + y + "px)";
+  }
+
+  function fxLength(target) {
+    if (target.tagName === "line") {
+      var dx =
+        parseFloat(target.getAttribute("x2") || "0") -
+        parseFloat(target.getAttribute("x1") || "0");
+      var dy =
+        parseFloat(target.getAttribute("y2") || "0") -
+        parseFloat(target.getAttribute("y1") || "0");
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    try {
+      return target.getTotalLength();
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  var fx = {
+    clamp: clamp,
+    lerp: lerp,
+    ease: ease,
+    easeIn: easeIn,
+    easeInOut: easeInOut,
+    seg: seg,
+    el: fxEl,
+    /** setAttribute shorthand. */
+    attr: function (id, name, value) {
+      var target = fxEl(id);
+      if (target) target.setAttribute(name, String(value));
+    },
+    /** Set opacity directly (0..1). */
+    op: fxOp,
+    /** Fade in over the t-window [start, end]. */
+    appear: function (id, t, start, end) {
+      fxOp(id, ease(seg(t, start, end)));
+    },
+    /** Fade out over the t-window [start, end]. */
+    vanish: function (id, t, start, end) {
+      fxOp(id, 1 - ease(seg(t, start, end)));
+    },
+    /** Fade in while scaling up from 0.6 — entrance for key objects. */
+    pop: function (id, t, start, end) {
+      var p = ease(seg(t, start, end));
+      var target = fxEl(id);
+      if (!target) return;
+      fxPrep(target);
+      target.style.opacity = String(p);
+      target.style.transform = "scale(" + lerp(0.6, 1, p) + ")";
+    },
+    /** Set a translate directly, in px. */
+    move: fxMove,
+    /** Glide from (fromX, fromY) to (toX, toY) over the t-window, in px. */
+    glide: function (id, t, start, end, fromX, fromY, toX, toY) {
+      var p = ease(seg(t, start, end));
+      fxMove(id, lerp(fromX, toX, p), lerp(fromY, toY, p));
+    },
+    /** Progressively stroke-draw an SVG line/path/shape (hand-drawn look). */
+    draw: function (id, t, start, end) {
+      var target = fxEl(id);
+      if (!target) return;
+      var len = fxLength(target);
+      if (!len) return;
+      var p = easeInOut(seg(t, start, end));
+      target.style.strokeDasharray = String(len);
+      target.style.strokeDashoffset = String(len * (1 - p));
+    },
+    /** Typewriter reveal of the element's own text over the t-window. */
+    type: function (id, t, start, end) {
+      var target = fxEl(id);
+      if (!target) return;
+      if (target.__fxFullText == null) target.__fxFullText = target.textContent || "";
+      var full = target.__fxFullText;
+      target.textContent = full.slice(0, Math.round(full.length * seg(t, start, end)));
+    },
+    /** Animated number counter from `from` to `to` over the t-window. */
+    count: function (id, from, to, t, start, end, decimals, suffix) {
+      var target = fxEl(id);
+      if (!target) return;
+      var v = lerp(from, to, easeInOut(seg(t, start, end)));
+      target.textContent = v.toFixed(decimals || 0) + (suffix || "");
+    },
+    /** Gentle looping scale pulse to draw the eye (pure in t). */
+    pulse: function (id, t, cycles, amount) {
+      var target = fxEl(id);
+      if (!target) return;
+      fxPrep(target);
+      var s = 1 + (amount || 0.08) * Math.sin(t * Math.PI * 2 * (cycles || 3));
+      target.style.transform = "scale(" + s + ")";
+    },
+    /** Slow camera zoom into the stage over the t-window. */
+    camera: function (t, start, end, fromScale, toScale, originX, originY) {
+      var stage = document.getElementById("stage");
+      var p = easeInOut(seg(t, start, end));
+      stage.style.transformOrigin =
+        (originX == null ? 50 : originX) + "% " + (originY == null ? 50 : originY) + "%";
+      stage.style.transform = "scale(" + lerp(fromScale, toScale, p) + ")";
+    }
+  };
 
   /** Populate the stage and compile the scene's draw(t). */
   window.setSceneData = function (data, style) {
@@ -102,8 +261,9 @@ html, body {
     document.getElementById("caption").textContent = _caption;
 
     try {
-      // The model supplies the body of draw(t). `accent` and `lerp`/`ease`
-      // helpers are in scope so scenes can match the deck's styling.
+      // The model supplies the body of draw(t). `accent`, the timeline math
+      // helpers and the `fx` library are in scope so scenes can match the
+      // deck's styling and use motion primitives instead of raw DOM math.
       _draw = new Function(
         "t",
         "accent",
@@ -111,6 +271,7 @@ html, body {
         "ease",
         "clamp",
         "seg",
+        "fx",
         String(data.js || "")
       );
     } catch (err) {
@@ -118,22 +279,6 @@ html, body {
       showError("Failed to compile draw(t): " + err.message);
     }
   };
-
-  function clamp(v, lo, hi) {
-    return v < lo ? lo : v > hi ? hi : v;
-  }
-  function lerp(a, b, u) {
-    return a + (b - a) * clamp(u, 0, 1);
-  }
-  function ease(u) {
-    u = clamp(u, 0, 1);
-    return 1 - Math.pow(1 - u, 3);
-  }
-  /** Map t onto a sub-interval [start, end] -> 0..1. */
-  function seg(t, start, end) {
-    if (end <= start) return t >= end ? 1 : 0;
-    return clamp((t - start) / (end - start), 0, 1);
-  }
 
   /** Render one frame. Pure function of t. */
   window.renderFrame = function (t) {
@@ -146,7 +291,7 @@ html, body {
 
     if (!_draw) return;
     try {
-      _draw(u, _accent, lerp, ease, clamp, seg);
+      _draw(u, _accent, lerp, ease, clamp, seg, fx);
     } catch (err) {
       showError("draw(t) threw at t=" + u.toFixed(3) + ": " + err.message);
     }

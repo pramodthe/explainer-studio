@@ -137,7 +137,7 @@ def generate(
     duration: int = typer.Option(
         60, "--duration", help="Target duration in seconds (30/60/90)"
     ),
-    fps: int = typer.Option(15, "--fps", help="Frames per second (15/24/30)"),
+    fps: int = typer.Option(24, "--fps", help="Frames per second (15/24/30)"),
     res: str = typer.Option(
         "720p", "--res", help="Resolution: 720p, 1080p, or vertical"
     ),
@@ -160,6 +160,22 @@ def generate(
     from explainer.core.schema import Script as ScriptModel
 
     try:
+        if script is None:
+            # Warn when no LLM is configured anywhere (CLI > env > config file):
+            # the heuristic fallback fills templates with placeholder text.
+            from explainer.config import ExplainerConfig
+
+            cfg = ExplainerConfig.resolve(
+                cli_args={"llm": llm} if llm is not None else {}
+            )
+            if cfg.llm is None:
+                console.print(
+                    "[yellow]Demo mode[/yellow] — no LLM configured, so the script "
+                    "is placeholder text, not a real explanation.\nSet an API key "
+                    "and pass [bold]--llm[/bold] (e.g. [bold]--llm "
+                    "openai/gpt-5.5[/bold]) for real content.\n"
+                )
+
         # Set up progress bar
         with Progress(
             SpinnerColumn(),
@@ -393,7 +409,7 @@ def init() -> None:
     lines.append(f'tts = "{tts_provider}"')
     if voice_id:
         lines.append(f'voice = "{voice_id}"')
-    lines.append("fps = 15")
+    lines.append("fps = 24")
     lines.append('resolution = "720p"')
     lines.append("keep_artifacts = false")
 

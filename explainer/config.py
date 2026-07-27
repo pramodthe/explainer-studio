@@ -72,7 +72,7 @@ def _read_toml(path: Path) -> dict[str, Any]:
         import tomllib
     else:
         try:
-            import tomli as tomllib
+            import tomli as tomllib  # type: ignore[import-not-found, unused-ignore]
         except ImportError as exc:
             raise ConfigError(
                 "Cannot read config file: 'tomli' package is required for "
@@ -80,7 +80,8 @@ def _read_toml(path: Path) -> dict[str, Any]:
             ) from exc
 
     with open(path, "rb") as f:
-        return tomllib.load(f)
+        data: dict[str, Any] = tomllib.load(f)
+        return data
 
 
 def _parse_bool(value: str) -> bool:
@@ -95,7 +96,7 @@ class ExplainerConfig(BaseModel):
         llm: LLM model string (e.g. "openai/gpt-5.6"). None uses heuristic fallback.
         tts: TTS provider name. Default "edge" (free, no API key).
         voice: Voice ID for TTS provider. None uses provider default.
-        fps: Frames per second for rendering. Default 15.
+        fps: Frames per second for rendering. Default 24.
         resolution: Output resolution. Default "720p".
         keep_artifacts: Whether to keep work directory after generation. Default False.
     """
@@ -103,7 +104,7 @@ class ExplainerConfig(BaseModel):
     llm: str | None = None
     tts: str = "edge"
     voice: str | None = None
-    fps: int = 15
+    fps: int = 24
     resolution: str = "720p"
     keep_artifacts: bool = False
 

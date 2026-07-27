@@ -67,7 +67,7 @@ Key facts for integration:
 - [Renderer](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/renderer.py):
   parallel headless-Chromium frame capture and network blocking
 - [Composer](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/composer.py):
-  FFmpeg segment encoding and concatenation
+  FFmpeg segment encoding, crossfade transitions, and music ducking
 - [Registry](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/registry.py):
   template discovery order and self-containment checks
 - [Sanitizer](https://raw.githubusercontent.com/pramodthe/explainer-studio/main/explainer/core/sanitize.py):

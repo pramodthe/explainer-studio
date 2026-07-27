@@ -75,6 +75,8 @@ training — anything where you want the *same* explainer back when the content 
 | [7 scene templates](#-templates) | title, concept, steps, compare, chart, takeaway, animation — self-contained HTML |
 | [Provider adapters](#-providers) | LLM via litellm or heuristic; TTS via edge-tts (free, 300+ voices) |
 | [Entry-point plugins](#-extending-it) | ship your own templates and providers as pip packages |
+| [`examples/`](examples/) | pre-built script JSONs (title→…→takeaway) for `--script`, plus `basic_usage.py` for the Python API |
+| [`samples/`](samples/) | real generated MP4s with per-clip notes and reproduce commands |
 
 ## ⚡ Try it in one command
 
@@ -86,13 +88,17 @@ explainer generate "photosynthesis"
 ```
 
 The built-in heuristic scripter and free edge-tts voice produce a ~60 s, 720p MP4 in the
-current directory. Swap in a real model whenever you want — everything downstream is
-unchanged:
+current directory. The CLI labels this **demo mode** — the script is placeholder text,
+not a real explanation. Swap in a real model whenever you want — everything downstream
+is unchanged:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 explainer generate "photosynthesis" --llm anthropic/claude-sonnet-5
 ```
+
+Real outputs live in [`samples/`](samples/) — narrated, animated explainers generated
+end-to-end by the commands above.
 
 ## 🚀 Quickstart
 
@@ -180,8 +186,9 @@ non-`file://` requests blocked**, receives `window.setSceneData(data, style)` on
 `window.renderFrame(t)` per frame with `t` stepping `0 → 1` across the scene's duration.
 Every frame is screenshotted to `f{NNNN}.png`.
 
-**4. Composition.** FFmpeg encodes each scene's frames against its audio, then concatenates
-the segments into the final MP4.
+**4. Composition.** FFmpeg encodes each scene's frames against its audio, then joins
+the segments into the final MP4 with 0.5 s crossfade transitions (`xfade` video +
+`acrossfade` audio).
 
 Work happens in a temp directory (`explainer-*`), removed afterwards unless you pass
 `--keep-artifacts`. Progress is reported throughout via `ProgressEvent(stage, pct, message)`.
@@ -204,7 +211,7 @@ Work happens in a temp directory (`explainer-*`), removed afterwards unless you 
 | `--lang` | `en` | Language code (`en`, `zh`, `es`, …) |
 | `--audience` | `student` | `kid`, `student`, or `adult` |
 | `--duration` | `60` | Target duration in seconds (30 / 60 / 90) |
-| `--fps` | `15` | Frames per second (15 / 24 / 30) |
+| `--fps` | `24` | Frames per second (15 / 24 / 30) |
 | `--res` | `720p` | `720p`, `1080p`, `vertical`, or explicit `WxH` |
 | `--llm` | heuristic | litellm model string, e.g. `openai/gpt-5.6` |
 | `--tts` | `edge` | `edge`, `elevenlabs`, `azure`, `openai` |
@@ -299,8 +306,11 @@ shown than listed.
 ```
 
 `js` is the body of `draw(t)`, called once per frame. The host provides `seg(t, a, b)` to
-give each element its own slice of the timeline, plus `ease`, `lerp`, `clamp` and the
-deck's `accent` colour — so a scene unfolds in step with the narration.
+give each element its own slice of the timeline, plus `ease`, `lerp`, `clamp`, the
+deck's `accent` colour, and an **`fx` motion library** — `fx.pop`, `fx.appear`,
+`fx.glide`, `fx.draw` (progressive stroke-drawing), `fx.type` (typewriter), `fx.count`,
+`fx.pulse`, `fx.camera` — so scenes are built from motion primitives, not raw DOM math,
+and unfold in step with the narration.
 
 Model-written code is screened before it renders. `Date`, `Math.random`, `setTimeout`,
 `requestAnimationFrame`, `fetch`, external URLs and CSS `transition`/`@keyframes` are

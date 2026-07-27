@@ -22,7 +22,7 @@ class TestDefaults:
         assert config.llm is None
         assert config.tts == "edge"
         assert config.voice is None
-        assert config.fps == 15
+        assert config.fps == 24
         assert config.resolution == "720p"
         assert config.keep_artifacts is False
 
@@ -33,7 +33,7 @@ class TestDefaults:
         )
         assert config.llm is None
         assert config.tts == "edge"
-        assert config.fps == 15
+        assert config.fps == 24
         assert config.resolution == "720p"
         assert config.keep_artifacts is False
 

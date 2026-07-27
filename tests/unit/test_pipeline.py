@@ -236,7 +236,7 @@ class TestPipelineGenerate:
         mock_composer_instance = MagicMock()
         MockComposer.return_value = mock_composer_instance
 
-        def fake_compose(scenes, work_dir, out, music=None):
+        def fake_compose(scenes, work_dir, out, music=None, durations=None):
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text("fake mp4")
             return out
@@ -319,7 +319,7 @@ class TestPipelineGenerate:
         mock_composer_instance = MagicMock()
         MockComposer.return_value = mock_composer_instance
 
-        def fake_compose(scenes, work_dir, out, music=None):
+        def fake_compose(scenes, work_dir, out, music=None, durations=None):
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text("fake mp4")
             return out
@@ -377,7 +377,7 @@ class TestPipelineGenerate:
         mock_composer_instance = MagicMock()
         MockComposer.return_value = mock_composer_instance
 
-        def fake_compose(scenes, work_dir, out, music=None):
+        def fake_compose(scenes, work_dir, out, music=None, durations=None):
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text("fake mp4")
             return out
@@ -442,7 +442,7 @@ class TestPipelineGenerate:
         mock_composer_instance = MagicMock()
         MockComposer.return_value = mock_composer_instance
 
-        def fake_compose(scenes, work_dir, out, music=None):
+        def fake_compose(scenes, work_dir, out, music=None, durations=None):
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text("fake mp4")
             return out
@@ -505,7 +505,7 @@ class TestPipelineRender:
         mock_composer_instance = MagicMock()
         MockComposer.return_value = mock_composer_instance
 
-        def fake_compose(scenes, work_dir, out, music=None):
+        def fake_compose(scenes, work_dir, out, music=None, durations=None):
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text("fake mp4")
             return out
@@ -563,7 +563,7 @@ class TestPipelineRender:
         mock_composer_instance = MagicMock()
         MockComposer.return_value = mock_composer_instance
 
-        def fake_compose(scenes, work_dir, out, music=None):
+        def fake_compose(scenes, work_dir, out, music=None, durations=None):
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text("fake")
             return out

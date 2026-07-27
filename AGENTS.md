@@ -31,7 +31,7 @@ explainer/                 the Python package (hatchling build, pyproject.toml)
     registry.py            template discovery (bundled → user dir → entry points)
     pipeline.py            Pipeline orchestrator (4 stages, progress events, cleanup)
     renderer.py            Playwright/Chromium frame capture, parallel per scene
-    composer.py            FFmpeg segment encoding + concat + optional music ducking
+    composer.py            FFmpeg segment encoding + crossfade join + music ducking
     sanitize.py            HTML/URI sanitizer + animation-code determinism validator
   providers/
     llm_base.py            LLMProvider protocol + ScriptRequest/TemplateInfo models
@@ -148,7 +148,9 @@ receiving `ProgressEvent(stage, pct, message)`; stages are
    `resume=True` skips scenes whose frames already exist (crash-resume).
 4. **Composition** (`core/composer.py`) — FFmpeg encodes each scene's frames + audio
    to a segment MP4 (`libx264`, `yuv420p`, AAC, `-shortest`, metadata stripped), then
-   concatenates segments with the concat demuxer (`-c copy`). Optional background
+   joins segments with a 0.5s crossfade (`xfade` + `acrossfade`; segment durations
+   probed with ffprobe, fade clamped to half the shortest scene). `Composer(transition=0)`
+   falls back to the concat demuxer (`-c copy`) for hard cuts. Optional background
    music is ducked to −18dB under narration via the `amix` filter.
 
 Errors are typed per stage (`core/errors.py`): `ScriptValidationError`,
@@ -168,7 +170,11 @@ to exit codes 1–5 with stage-specific suggestions.
   code.
 - The `animation` kind is the controlled exception: the model supplies `markup`,
   optional `css`, and a `js` body compiled into `draw(t)` by the template's host page
-  (plus an optional `caption`). `validate_animation_code()` rejects anything that
+  (plus an optional `caption`). The host injects an `fx` motion library into `draw(t)`'s
+  scope (`fx.pop`/`appear`/`vanish`/`glide`/`draw`/`type`/`count`/`pulse`/`camera` plus
+  the `seg`/`lerp`/`ease` math helpers) so scenes are sequenced from motion primitives;
+  the full contract is documented in `prompts/script_system.md`.
+  `validate_animation_code()` rejects anything that
   breaks determinism or sandboxing before narration starts: `Date.now`/`new Date`/
   `performance.now`, `Math.random`/`crypto.getRandomValues`, `requestAnimationFrame`/
   `setTimeout`/`setInterval`, `fetch`/`XMLHttpRequest`/`WebSocket`/`importScripts`,
@@ -197,7 +203,7 @@ pip-installable packages can extend the tool (see CONTRIBUTING.md for full guide
 `EXPLAINER_*` env vars (`EXPLAINER_LLM`, `EXPLAINER_TTS`, `EXPLAINER_VOICE`,
 `EXPLAINER_FPS`, `EXPLAINER_RESOLUTION`, `EXPLAINER_KEEP_ARTIFACTS`) →
 `~/.explainer/config.toml` → defaults (`llm=None` i.e. heuristic, `tts="edge"`,
-`fps=15`, `resolution="720p"`). The package does **not** auto-load `.env` — export it
+`fps=24`, `resolution="720p"`). The package does **not** auto-load `.env` — export it
 first (`set -a && source .env && set +a`).
 
 API-key checks are prefix-based and run at startup: `openai/`/`gpt/` →

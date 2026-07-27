@@ -15,7 +15,7 @@ The renderer captures a screenshot after each `renderFrame(t)` call, stepping `t
 
 ## Bundled Templates
 
-Explainer Studio ships with six template kinds:
+Explainer Studio ships with seven template kinds:
 
 | Kind | Purpose | Typical Data |
 |------|---------|--------------|
@@ -25,6 +25,7 @@ Explainer Studio ships with six template kinds:
 | `compare` | Two-column side-by-side comparison | `left`, `right` (arrays of items) |
 | `chart` | Animated bar or line chart | `type`, `labels`, `values` |
 | `takeaway` | Key points summary with sequential reveals | `points` (array of strings) |
+| `animation` | Host for model-authored markup + `draw(t)` | `markup`, `css`, `js`, `caption` |
 
 List discovered templates:
 
@@ -294,6 +295,28 @@ function lerp(a, b, t) {
     return a + (b - a) * t;
 }
 ```
+
+### The `animation` host's `fx` library
+
+The bundled `animation` template additionally injects an `fx` motion library into the
+model-authored `draw(t)` scope, so scenes can be sequenced from motion primitives
+instead of raw DOM math. Every helper is a pure function of `t`:
+
+| Helper | Effect |
+|--------|--------|
+| `fx.appear(id, t, a, b)` / `fx.vanish(id, t, a, b)` | Fade in / out over the window |
+| `fx.pop(id, t, a, b)` | Fade in while scaling up (entrance for key objects) |
+| `fx.glide(id, t, a, b, fromX, fromY, toX, toY)` | Move along a path, in px |
+| `fx.draw(id, t, a, b)` | Progressively stroke-draw an SVG line/path/shape |
+| `fx.type(id, t, a, b)` | Typewriter reveal of the element's own text |
+| `fx.count(id, from, to, t, a, b)` | Animated number counter (optional `decimals`, `suffix`) |
+| `fx.pulse(id, t, cycles, amount)` | Gentle looping scale pulse |
+| `fx.camera(t, a, b, fromScale, toScale)` | Slow zoom into the stage (optional origin %) |
+| `fx.el` / `fx.attr` / `fx.op` / `fx.move` | Direct DOM escape hatches |
+| `fx.seg` / `fx.lerp` / `fx.ease` / `fx.easeIn` / `fx.easeInOut` / `fx.clamp` | Timeline math |
+
+Transform-writing helpers (`pop`, `glide`, `move`, `pulse`) each own the element's
+`transform` style — combine effects by nesting elements in a `<g>` or `<div>`.
 
 ---
 
